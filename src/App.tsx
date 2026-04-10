@@ -1,21 +1,46 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import Navigation from './components/Navigation';
 import Footer from './components/Footer';
 import InvoiceUploader from './components/InvoiceUploader';
 import ImageCropper from './components/ImageCropper';
+import ImageYoloCropper from './components/ImageYoloCropper';
 import InvoiceResult from './components/InvoiceResult';
-import { preprocessInvoice } from './services/api';
-import type { InvoiceData, ProcessingInfo } from './types/api';
+import InvoiceYoloResult from './components/InvoiceYoloResult';
+import { usePreprocessInvoice } from './services/hooks/usePreprocessInvoice';
+import { useYolo } from './services/hooks/useYolo';
 
-type AppView = 'home' | 'crop' | 'processing' | 'result' | 'error' | 'about';
+type AppView =
+  | 'home'
+  | 'crop'
+  | 'yolo-crop'
+  | 'processing'
+  | 'yolo-processing'
+  | 'result'
+  | 'yolo-result'
+  | 'error'
+  | 'yolo-error'
+  | 'about';
+
+type ProcessingMode = 'standard' | 'yolo';
 
 function App() {
   const [currentView, setCurrentView] = useState<AppView>('home');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [invoiceData, setInvoiceData] = useState<InvoiceData | null>(null);
-  const [processingInfo, setProcessingInfo] = useState<ProcessingInfo | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [mode, setMode] = useState<ProcessingMode>('standard');
+
+  const {
+    data: preprocessData,
+    loading: isLoading,
+    mutate: preprocess,
+    error: preprocessError,
+  } = usePreprocessInvoice();
+
+  const {
+    preprocessData: yoloData,
+    isLoading: isYoloLoading,
+    preprocess: yoloPreprocess,
+    error: yoloError,
+  } = useYolo();
 
   const handleNavigate = useCallback((section: string) => {
     if (section === 'home') {
@@ -26,64 +51,73 @@ function App() {
         document.getElementById('upload-section')?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
     } else if (section === 'about') {
-      setCurrentView('about' as AppView);
+      setCurrentView('about');
     }
   }, []);
 
   const handleFileSelect = useCallback((file: File) => {
     setSelectedFile(file);
-    setCurrentView('crop');
-  }, []);
+    setCurrentView(mode === 'yolo' ? 'yolo-crop' : 'crop');
+  }, [mode]);
 
   const handleCropComplete = useCallback(async (croppedFile: File) => {
     setSelectedFile(croppedFile);
     setCurrentView('processing');
-    setIsLoading(true);
+    await preprocess(croppedFile);
+  }, [preprocess]);
 
-    try {
-      const response = await preprocessInvoice(croppedFile);
-      
-      if (response.success) {
-        setInvoiceData(response.invoice_data);
-        setProcessingInfo(response.processing_info);
-        setCurrentView('result');
-      } else {
-        setErrorMessage(response.message || 'Failed to process invoice');
-        setCurrentView('error');
-      }
-    } catch (error: any) {
-      console.error('Error processing invoice:', error);
-      setErrorMessage(
-        error.response?.data?.detail || 
-        error.message || 
-        'Failed to connect to the API server. Please ensure the backend is running on port 8000.'
-      );
-      setCurrentView('error');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const handleCropSkip = useCallback(async () => {
+    if (!selectedFile) return;
+    setCurrentView('processing');
+    await preprocess(selectedFile);
+  }, [selectedFile, preprocess]);
+
+  const handleYoloSkip = useCallback(async () => {
+    if (!selectedFile) return;
+    setCurrentView('yolo-processing');
+    await yoloPreprocess(selectedFile);
+  }, [selectedFile, yoloPreprocess]);
+
+  const handleYoloCropComplete = useCallback(async (croppedFile: File) => {
+    setSelectedFile(croppedFile);
+    setCurrentView('yolo-processing');
+    await yoloPreprocess(croppedFile);
+  }, [yoloPreprocess]);
+
+  useEffect(() => {
+    if (preprocessError) setCurrentView('error');
+  }, [preprocessError]);
+
+  useEffect(() => {
+    if (preprocessData?.success) setCurrentView('result');
+  }, [preprocessData]);
+
+  useEffect(() => {
+    if (yoloError) setCurrentView('yolo-error');
+  }, [yoloError]);
+
+  useEffect(() => {
+    if (yoloData?.success) setCurrentView('yolo-result');
+  }, [yoloData]);
 
   const handleReset = useCallback(() => {
     setSelectedFile(null);
-    setInvoiceData(null);
-    setProcessingInfo(null);
-    setErrorMessage('');
     setCurrentView('home');
   }, []);
 
-  const handleNavigation = (section: string) => {
-    handleNavigate(section);
-  };
+  const handleModeToggle = useCallback((newMode: ProcessingMode) => {
+    setMode(newMode);
+  }, []);
+
+  const isProcessing = isLoading || isYoloLoading;
 
   return (
     <div className="app">
-      <Navigation onNavigate={handleNavigation} />
+      <Navigation onNavigate={handleNavigate} />
 
       <main className="main-content">
         {currentView === 'home' && (
           <div className="view-home">
-            {/* Hero Section */}
             <section className="hero-section">
               <div className="hero-container">
                 <div className="hero-content">
@@ -98,7 +132,7 @@ function App() {
                     <span className="gradient-text"> Invoice Data</span>
                   </h1>
                   <p className="hero-subtitle">
-                    Upload or capture an invoice invoice, and our AI will automatically detect, 
+                    Upload or capture an invoice invoice, and our AI will automatically detect,
                     crop, and extract all the important data in seconds.
                   </p>
                   <div className="hero-features">
@@ -150,17 +184,41 @@ function App() {
               </div>
             </section>
 
-            {/* Upload Section */}
             <section id="upload-section" className="upload-section">
               <div className="upload-container">
                 <div className="section-header">
                   <h2>Upload Your Invoice</h2>
                   <p>
-                    Support all major invoice formats and layouts. 
+                    Support all major invoice formats and layouts.
                     Our AI will handle the rest.
                   </p>
                 </div>
-                <InvoiceUploader onFileSelect={handleFileSelect} isLoading={isLoading} />
+
+                {/* Mode Toggle */}
+                <div className="mode-toggle">
+                  <button
+                    className={`mode-btn ${mode === 'standard' ? 'active' : ''}`}
+                    onClick={() => handleModeToggle('standard')}
+                  >
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                      <rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" strokeWidth="1.5" />
+                      <path d="M7 10l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    Standard OCR
+                  </button>
+                  <button
+                    className={`mode-btn ${mode === 'yolo' ? 'active' : ''}`}
+                    onClick={() => handleModeToggle('yolo')}
+                  >
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                      <circle cx="10" cy="10" r="7" stroke="currentColor" strokeWidth="1.5" />
+                      <circle cx="10" cy="10" r="3" fill="currentColor" />
+                    </svg>
+                    YOLO Detection
+                  </button>
+                </div>
+
+                <InvoiceUploader onFileSelect={handleFileSelect} isLoading={isProcessing} />
               </div>
             </section>
           </div>
@@ -172,6 +230,20 @@ function App() {
               <ImageCropper
                 image={selectedFile}
                 onCropComplete={handleCropComplete}
+                onSkipCrop={handleCropSkip}
+                onCancel={handleReset}
+              />
+            </div>
+          </div>
+        )}
+
+        {currentView === 'yolo-crop' && selectedFile && (
+          <div className="view-crop">
+            <div className="crop-view-container">
+              <ImageYoloCropper
+                image={selectedFile}
+                onCropComplete={handleYoloCropComplete}
+                onSkipCrop={handleYoloSkip}
                 onCancel={handleReset}
               />
             </div>
@@ -218,11 +290,62 @@ function App() {
           </div>
         )}
 
-        {currentView === 'result' && invoiceData && processingInfo && (
+        {/* ── YOLO PROCESSING ── */}
+        {currentView === 'yolo-processing' && (
+          <div className="view-processing">
+            <div className="processing-container">
+              <div className="processing-animation">
+                <div className="processing-spinner yolo-spinner" />
+                <div className="processing-steps">
+                  <div className="processing-step active">
+                    <div className="step-icon">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="9" stroke="#F59E0B" strokeWidth="2" />
+                        <circle cx="12" cy="12" r="4" fill="#F59E0B" />
+                      </svg>
+                    </div>
+                    <span>YOLO Detection</span>
+                  </div>
+                  <div className="processing-step">
+                    <div className="step-icon">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <rect x="5" y="5" width="14" height="14" rx="2" stroke="#F59E0B" strokeWidth="2" strokeDasharray="4 2" />
+                      </svg>
+                    </div>
+                    <span>Locating Invoice</span>
+                  </div>
+                  <div className="processing-step">
+                    <div className="step-icon">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <path d="M9 12l2 2 4-4" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        <circle cx="12" cy="12" r="9" stroke="#F59E0B" strokeWidth="2" />
+                      </svg>
+                    </div>
+                    <span>Extracting Data</span>
+                  </div>
+                </div>
+              </div>
+              <h2>Processing with YOLO</h2>
+              <p>YOLO model is detecting and extracting invoice data...</p>
+            </div>
+          </div>
+        )}
+
+        {currentView === 'result' && preprocessData?.invoice_data && preprocessData?.processing_info && (
           <div className="view-result">
             <InvoiceResult
-              invoiceData={invoiceData}
-              processingInfo={processingInfo}
+              invoiceData={preprocessData.invoice_data}
+              processingInfo={preprocessData.processing_info}
+              onReset={handleReset}
+            />
+          </div>
+        )}
+
+        {currentView === 'yolo-result' && yoloData?.invoice_data && yoloData?.processing_info && (
+          <div className="view-result">
+            <InvoiceYoloResult
+              invoiceData={yoloData.invoice_data}
+              processingInfo={yoloData.processing_info}
               onReset={handleReset}
             />
           </div>
@@ -238,7 +361,30 @@ function App() {
                 </svg>
               </div>
               <h2>Processing Failed</h2>
-              <p className="error-message">{errorMessage}</p>
+              <p className="error-message">{preprocessError || 'An unexpected error occurred.'}</p>
+              <div className="error-actions">
+                <button className="btn btn-primary" onClick={handleReset}>
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path d="M4 10h12M10 4l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  Try Again
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {currentView === 'yolo-error' && (
+          <div className="view-error">
+            <div className="error-container">
+              <div className="error-icon">
+                <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+                  <circle cx="32" cy="32" r="28" stroke="#F59E0B" strokeWidth="3" />
+                  <path d="M32 20v16M32 44v2" stroke="#F59E0B" strokeWidth="3" strokeLinecap="round" />
+                </svg>
+              </div>
+              <h2>YOLO Processing Failed</h2>
+              <p className="error-message">{yoloError || 'An unexpected error occurred.'}</p>
               <div className="error-actions">
                 <button className="btn btn-primary" onClick={handleReset}>
                   <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -256,7 +402,7 @@ function App() {
             <div className="about-container">
               <h1>About InvoiceOCR</h1>
               <p className="about-intro">
-                InvoiceOCR is an AI-powered optical character recognition (OCR) application 
+                InvoiceOCR is an AI-powered optical character recognition (OCR) application
                 designed to automatically detect, crop, and extract data from invoices and receipts.
               </p>
 
@@ -270,7 +416,7 @@ function App() {
                   </div>
                   <h3>Smart Invoice Detection</h3>
                   <p>
-                    Uses advanced YOLO and OpenCV algorithms to automatically detect invoice 
+                    Uses advanced YOLO and OpenCV algorithms to automatically detect invoice
                     boundaries and apply perspective correction.
                   </p>
                 </div>
@@ -284,7 +430,7 @@ function App() {
                   </div>
                   <h3>OCR Text Recognition</h3>
                   <p>
-                    Powered by NextOCR engine to accurately extract text from invoices, 
+                    Powered by NextOCR engine to accurately extract text from invoices,
                     including support for multiple languages and fonts.
                   </p>
                 </div>
@@ -299,7 +445,7 @@ function App() {
                   </div>
                   <h3>Automatic Data Extraction</h3>
                   <p>
-                    Intelligently parses extracted text to identify merchant information, 
+                    Intelligently parses extracted text to identify merchant information,
                     line items, payment details, and more.
                   </p>
                 </div>
@@ -313,7 +459,7 @@ function App() {
                   </div>
                   <h3>Multi-Format Support</h3>
                   <p>
-                    Supports JPEG, PNG, WebP, BMP, and TIFF image formats with files 
+                    Supports JPEG, PNG, WebP, BMP, and TIFF image formats with files
                     up to 10MB in size.
                   </p>
                 </div>

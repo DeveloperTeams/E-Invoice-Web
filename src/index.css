@@ -371,6 +371,49 @@ body {
 }
 
 /* Upload Section */
+.mode-toggle {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.mode-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: #fff;
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mode-btn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.mode-btn.active {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.mode-btn.active:nth-child(2) {
+  border-color: #F59E0B;
+  background: #F59E0B;
+}
+
+.mode-btn:nth-child(2):hover:not(.active) {
+  border-color: #F59E0B;
+  color: #F59E0B;
+}
+
 .upload-section {
   padding: 4rem 1.5rem;
   background: #fff;
@@ -675,6 +718,82 @@ body {
   height: 100%;
 }
 
+.btn-skip-crop {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  border: 2px solid #F59E0B;
+  border-radius: var(--radius-lg);
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-skip-crop:hover {
+  background: #F59E0B;
+  color: #fff;
+}
+
+.yolo-crop-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: #fef3c7;
+  color: #92400e;
+  padding: 0.35rem 0.75rem;
+  border-radius: 9999px;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+.yolo-preview {
+  position: relative;
+}
+
+.yolo-detection-hint {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.yolo-hint-box {
+  background: rgba(245, 158, 11, 0.15);
+  border: 2px dashed #F59E0B;
+  border-radius: 8px;
+  padding: 0.75rem 1.25rem;
+  color: #F59E0B;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.cropper-info-bar {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 0.75rem 1.5rem;
+  border-top: 1px solid var(--color-border);
+  background: #f9fafb;
+}
+
+.image-size-info,
+.file-size-info {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
 .cropper-actions {
   padding: 1.5rem;
   border-top: 1px solid var(--color-border);
@@ -709,6 +828,10 @@ body {
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin: 0 auto 2rem;
+}
+
+.yolo-spinner {
+  border-top-color: #F59E0B !important;
 }
 
 .processing-steps {
@@ -779,6 +902,11 @@ body {
   border-radius: 9999px;
   font-weight: 600;
   font-size: 0.875rem;
+}
+
+.success-badge.yolo-badge {
+  background: #fef3c7;
+  color: #92400e;
 }
 
 .result-title {
@@ -899,6 +1027,11 @@ body {
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
+}
+
+.method-badge.yolo {
+  background: #fef3c7;
+  color: #92400e;
 }
 
 .payment-badge {
