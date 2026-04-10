@@ -1,0 +1,355 @@
+import { useState, useCallback } from 'react';
+import Navigation from './components/Navigation';
+import Footer from './components/Footer';
+import InvoiceUploader from './components/InvoiceUploader';
+import ImageCropper from './components/ImageCropper';
+import InvoiceResult from './components/InvoiceResult';
+import { preprocessInvoice } from './services/api';
+import type { InvoiceData, ProcessingInfo } from './types/api';
+
+type AppView = 'home' | 'crop' | 'processing' | 'result' | 'error' | 'about';
+
+function App() {
+  const [currentView, setCurrentView] = useState<AppView>('home');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [invoiceData, setInvoiceData] = useState<InvoiceData | null>(null);
+  const [processingInfo, setProcessingInfo] = useState<ProcessingInfo | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string>('');
+
+  const handleNavigate = useCallback((section: string) => {
+    if (section === 'home') {
+      setCurrentView('home');
+    } else if (section === 'scan') {
+      setCurrentView('home');
+      setTimeout(() => {
+        document.getElementById('upload-section')?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    } else if (section === 'about') {
+      setCurrentView('about' as AppView);
+    }
+  }, []);
+
+  const handleFileSelect = useCallback((file: File) => {
+    setSelectedFile(file);
+    setCurrentView('crop');
+  }, []);
+
+  const handleCropComplete = useCallback(async (croppedFile: File) => {
+    setSelectedFile(croppedFile);
+    setCurrentView('processing');
+    setIsLoading(true);
+
+    try {
+      const response = await preprocessInvoice(croppedFile);
+      
+      if (response.success) {
+        setInvoiceData(response.invoice_data);
+        setProcessingInfo(response.processing_info);
+        setCurrentView('result');
+      } else {
+        setErrorMessage(response.message || 'Failed to process invoice');
+        setCurrentView('error');
+      }
+    } catch (error: any) {
+      console.error('Error processing invoice:', error);
+      setErrorMessage(
+        error.response?.data?.detail || 
+        error.message || 
+        'Failed to connect to the API server. Please ensure the backend is running on port 8000.'
+      );
+      setCurrentView('error');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const handleReset = useCallback(() => {
+    setSelectedFile(null);
+    setInvoiceData(null);
+    setProcessingInfo(null);
+    setErrorMessage('');
+    setCurrentView('home');
+  }, []);
+
+  const handleNavigation = (section: string) => {
+    handleNavigate(section);
+  };
+
+  return (
+    <div className="app">
+      <Navigation onNavigate={handleNavigation} />
+
+      <main className="main-content">
+        {currentView === 'home' && (
+          <div className="view-home">
+            {/* Hero Section */}
+            <section className="hero-section">
+              <div className="hero-container">
+                <div className="hero-content">
+                  <div className="hero-badge">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <path d="M8 1v14M1 8h14" stroke="#6366F1" strokeWidth="2" strokeLinecap="round" />
+                    </svg>
+                    <span>AI-Powered OCR</span>
+                  </div>
+                  <h1 className="hero-title">
+                    Scan & Extract
+                    <span className="gradient-text"> Invoice Data</span>
+                  </h1>
+                  <p className="hero-subtitle">
+                    Upload or capture an invoice invoice, and our AI will automatically detect, 
+                    crop, and extract all the important data in seconds.
+                  </p>
+                  <div className="hero-features">
+                    <div className="hero-feature">
+                      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <circle cx="10" cy="10" r="8" stroke="#10B981" strokeWidth="2" />
+                        <path d="M6 10l3 3 5-6" stroke="#10B981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      <span>Auto Detection</span>
+                    </div>
+                    <div className="hero-feature">
+                      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <circle cx="10" cy="10" r="8" stroke="#10B981" strokeWidth="2" />
+                        <path d="M6 10l3 3 5-6" stroke="#10B981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      <span>Smart Cropping</span>
+                    </div>
+                    <div className="hero-feature">
+                      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <circle cx="10" cy="10" r="8" stroke="#10B981" strokeWidth="2" />
+                        <path d="M6 10l3 3 5-6" stroke="#10B981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      <span>Instant Extraction</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="hero-visual">
+                  <div className="hero-card">
+                    <div className="hero-card-header">
+                      <div className="hero-card-dots">
+                        <span className="dot red" />
+                        <span className="dot yellow" />
+                        <span className="dot green" />
+                      </div>
+                    </div>
+                    <div className="hero-card-content">
+                      <div className="skeleton-line" style={{ width: '80%' }} />
+                      <div className="skeleton-line" style={{ width: '60%' }} />
+                      <div className="skeleton-line" style={{ width: '90%' }} />
+                      <div className="skeleton-grid">
+                        <div className="skeleton-box" />
+                        <div className="skeleton-box" />
+                        <div className="skeleton-box" />
+                        <div className="skeleton-box" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Upload Section */}
+            <section id="upload-section" className="upload-section">
+              <div className="upload-container">
+                <div className="section-header">
+                  <h2>Upload Your Invoice</h2>
+                  <p>
+                    Support all major invoice formats and layouts. 
+                    Our AI will handle the rest.
+                  </p>
+                </div>
+                <InvoiceUploader onFileSelect={handleFileSelect} isLoading={isLoading} />
+              </div>
+            </section>
+          </div>
+        )}
+
+        {currentView === 'crop' && selectedFile && (
+          <div className="view-crop">
+            <div className="crop-view-container">
+              <ImageCropper
+                image={selectedFile}
+                onCropComplete={handleCropComplete}
+                onCancel={handleReset}
+              />
+            </div>
+          </div>
+        )}
+
+        {currentView === 'processing' && (
+          <div className="view-processing">
+            <div className="processing-container">
+              <div className="processing-animation">
+                <div className="processing-spinner" />
+                <div className="processing-steps">
+                  <div className="processing-step active">
+                    <div className="step-icon">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <rect x="3" y="3" width="18" height="18" rx="3" stroke="#6366F1" strokeWidth="2" />
+                        <path d="M8 12h8M12 8v8" stroke="#6366F1" strokeWidth="2" strokeLinecap="round" />
+                      </svg>
+                    </div>
+                    <span>Detecting Invoice</span>
+                  </div>
+                  <div className="processing-step">
+                    <div className="step-icon">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <path d="M4 7h16M4 12h16M4 17h16" stroke="#6366F1" strokeWidth="2" strokeLinecap="round" />
+                      </svg>
+                    </div>
+                    <span>Extracting Text</span>
+                  </div>
+                  <div className="processing-step">
+                    <div className="step-icon">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <path d="M9 12l2 2 4-4" stroke="#6366F1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        <circle cx="12" cy="12" r="9" stroke="#6366F1" strokeWidth="2" />
+                      </svg>
+                    </div>
+                    <span>Structuring Data</span>
+                  </div>
+                </div>
+              </div>
+              <h2>Processing Your Invoice</h2>
+              <p>Our AI is analyzing your invoice...</p>
+            </div>
+          </div>
+        )}
+
+        {currentView === 'result' && invoiceData && processingInfo && (
+          <div className="view-result">
+            <InvoiceResult
+              invoiceData={invoiceData}
+              processingInfo={processingInfo}
+              onReset={handleReset}
+            />
+          </div>
+        )}
+
+        {currentView === 'error' && (
+          <div className="view-error">
+            <div className="error-container">
+              <div className="error-icon">
+                <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+                  <circle cx="32" cy="32" r="28" stroke="#EF4444" strokeWidth="3" />
+                  <path d="M32 20v16M32 44v2" stroke="#EF4444" strokeWidth="3" strokeLinecap="round" />
+                </svg>
+              </div>
+              <h2>Processing Failed</h2>
+              <p className="error-message">{errorMessage}</p>
+              <div className="error-actions">
+                <button className="btn btn-primary" onClick={handleReset}>
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path d="M4 10h12M10 4l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  Try Again
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {currentView === 'about' && (
+          <div className="view-about">
+            <div className="about-container">
+              <h1>About InvoiceOCR</h1>
+              <p className="about-intro">
+                InvoiceOCR is an AI-powered optical character recognition (OCR) application 
+                designed to automatically detect, crop, and extract data from invoices and receipts.
+              </p>
+
+              <div className="about-features">
+                <div className="about-feature">
+                  <div className="feature-icon">
+                    <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                      <rect x="4" y="4" width="32" height="32" rx="8" fill="#6366F1" />
+                      <path d="M14 20l4 4 8-8" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                  <h3>Smart Invoice Detection</h3>
+                  <p>
+                    Uses advanced YOLO and OpenCV algorithms to automatically detect invoice 
+                    boundaries and apply perspective correction.
+                  </p>
+                </div>
+
+                <div className="about-feature">
+                  <div className="feature-icon">
+                    <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                      <rect x="4" y="4" width="32" height="32" rx="8" fill="#8B5CF6" />
+                      <path d="M12 16h16M12 24h12M12 32h8" stroke="white" strokeWidth="2" strokeLinecap="round" />
+                    </svg>
+                  </div>
+                  <h3>OCR Text Recognition</h3>
+                  <p>
+                    Powered by NextOCR engine to accurately extract text from invoices, 
+                    including support for multiple languages and fonts.
+                  </p>
+                </div>
+
+                <div className="about-feature">
+                  <div className="feature-icon">
+                    <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                      <rect x="4" y="4" width="32" height="32" rx="8" fill="#10B981" />
+                      <path d="M14 14h12v12H14V14z" stroke="white" strokeWidth="2" />
+                      <path d="M18 20h4M20 18v4" stroke="white" strokeWidth="2" strokeLinecap="round" />
+                    </svg>
+                  </div>
+                  <h3>Automatic Data Extraction</h3>
+                  <p>
+                    Intelligently parses extracted text to identify merchant information, 
+                    line items, payment details, and more.
+                  </p>
+                </div>
+
+                <div className="about-feature">
+                  <div className="feature-icon">
+                    <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                      <rect x="4" y="4" width="32" height="32" rx="8" fill="#F59E0B" />
+                      <path d="M12 20l6 6 10-12" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                  <h3>Multi-Format Support</h3>
+                  <p>
+                    Supports JPEG, PNG, WebP, BMP, and TIFF image formats with files 
+                    up to 10MB in size.
+                  </p>
+                </div>
+              </div>
+
+              <div className="about-tech">
+                <h2>Technology Stack</h2>
+                <div className="tech-grid">
+                  <div className="tech-card">
+                    <h4>Frontend</h4>
+                    <ul>
+                      <li>React 19 + TypeScript</li>
+                      <li>Vite (Build Tool)</li>
+                      <li>TailwindCSS 4</li>
+                      <li>Bun (Package Manager)</li>
+                    </ul>
+                  </div>
+                  <div className="tech-card">
+                    <h4>Backend</h4>
+                    <ul>
+                      <li>FastAPI (Python)</li>
+                      <li>OpenCV</li>
+                      <li>YOLOv10</li>
+                      <li>NextOCR Engine</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+
+      <Footer />
+    </div>
+  );
+}
+
+export default App;
