@@ -1,5 +1,5 @@
 import client from './client';
-import type { HealthResponse, PreprocessResponse } from '../types/api';
+import type { HealthResponse, PreprocessResponse, YOLOPreprocessResponse } from '../types/api';
 
 
 export async function checkHealth(): Promise<HealthResponse> {
@@ -19,7 +19,7 @@ export async function preprocessInvoice(file: File): Promise<PreprocessResponse>
   return response.data;
 }
 
-export async function preprocessInvoiceYOLO(file: File): Promise<PreprocessResponse> {
+export async function preprocessInvoiceYOLO(file: File): Promise<YOLOPreprocessResponse> {
   const formData = new FormData();
   formData.append('file', file);
 

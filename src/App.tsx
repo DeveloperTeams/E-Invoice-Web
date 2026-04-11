@@ -8,6 +8,7 @@ import InvoiceResult from './components/InvoiceResult';
 import InvoiceYoloResult from './components/InvoiceYoloResult';
 import { usePreprocessInvoice } from './services/hooks/usePreprocessInvoice';
 import { useYolo } from './services/hooks/useYolo';
+import type { InvoiceData, ProcessingInfo } from './types/api';
 
 type AppView =
   | 'home'
@@ -22,6 +23,35 @@ type AppView =
   | 'about';
 
 type ProcessingMode = 'standard' | 'yolo';
+
+const EMPTY_INVOICE_DATA: InvoiceData = {
+  merchant_name: '',
+  merchant_address: '',
+  merchant_phone: '',
+  invoice_number: '',
+  invoice_date: '',
+  invoice_time: '',
+  items: [],
+  payment: {
+    subtotal: 0,
+    tax: 0,
+    total: 0,
+    method: '',
+  },
+  dynamic_fields: {},
+  raw_text: '',
+};
+
+const EMPTY_PROCESSING_INFO: ProcessingInfo = {
+  detection_method: 'unknown',
+  bounding_box: { x: 0, y: 0, width: 0, height: 0 },
+  confidence: 0,
+  provider: 'unknown',
+  latency: 0,
+  cropped_image_url: '',
+  image_width: 0,
+  image_height: 0,
+};
 
 function App() {
   const [currentView, setCurrentView] = useState<AppView>('home');
@@ -57,7 +87,11 @@ function App() {
 
   const handleFileSelect = useCallback((file: File) => {
     setSelectedFile(file);
-    setCurrentView(mode === 'yolo' ? 'yolo-crop' : 'crop');
+    if (mode === 'yolo') {
+      setCurrentView('yolo-crop');
+    } else {
+      setCurrentView('crop');
+    }
   }, [mode]);
 
   const handleCropComplete = useCallback(async (croppedFile: File) => {
@@ -110,6 +144,10 @@ function App() {
   }, []);
 
   const isProcessing = isLoading || isYoloLoading;
+  const standardInvoiceData = preprocessData?.invoice_data ?? EMPTY_INVOICE_DATA;
+  const standardProcessingInfo = preprocessData?.processing_info ?? EMPTY_PROCESSING_INFO;
+  const yoloInvoiceData = yoloData?.invoice_data ?? EMPTY_INVOICE_DATA;
+  const yoloProcessingInfo = yoloData?.processing_info ?? EMPTY_PROCESSING_INFO;
 
   return (
     <div className="app">
@@ -290,7 +328,6 @@ function App() {
           </div>
         )}
 
-        {/* ── YOLO PROCESSING ── */}
         {currentView === 'yolo-processing' && (
           <div className="view-processing">
             <div className="processing-container">
@@ -331,21 +368,21 @@ function App() {
           </div>
         )}
 
-        {currentView === 'result' && preprocessData?.invoice_data && preprocessData?.processing_info && (
+        {currentView === 'result' && preprocessData?.success && (
           <div className="view-result">
             <InvoiceResult
-              invoiceData={preprocessData.invoice_data}
-              processingInfo={preprocessData.processing_info}
+              invoiceData={standardInvoiceData}
+              processingInfo={standardProcessingInfo}
               onReset={handleReset}
             />
           </div>
         )}
 
-        {currentView === 'yolo-result' && yoloData?.invoice_data && yoloData?.processing_info && (
+        {currentView === 'yolo-result' && yoloData?.success && (
           <div className="view-result">
             <InvoiceYoloResult
-              invoiceData={yoloData.invoice_data}
-              processingInfo={yoloData.processing_info}
+              invoiceData={yoloInvoiceData}
+              processingInfo={yoloProcessingInfo}
               onReset={handleReset}
             />
           </div>

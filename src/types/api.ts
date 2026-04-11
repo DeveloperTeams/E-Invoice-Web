@@ -45,9 +45,38 @@ export interface ProcessingInfo {
 
 export interface PreprocessResponse {
   success: boolean;
-  invoice_data: InvoiceData;
-  processing_info: ProcessingInfo;
+  invoice_data?: InvoiceData;
+  processing_info?: ProcessingInfo;
+  detection_info?: YOLODetectionInfo;
+  ocr_confidence?: number;
+  processing_time_ms?: number;
+  processed_image_url?: string;
+  visualization_url?: string;
   message: string;
+}
+
+export interface YOLODetectionInfo {
+  detection_method: string;
+  confidence: number;
+  bounding_box: BoundingBox;
+  num_boxes_detected?: number;
+  merged_boxes?: boolean;
+  image_width: number;
+  image_height: number;
+  quality_metrics?: Record<string, unknown>;
+}
+
+export interface YOLOPreprocessResponse {
+  success: boolean;
+  invoice_data?: InvoiceData;
+  detection_info?: YOLODetectionInfo;
+  processing_info?: ProcessingInfo;
+  ocr_confidence?: number;
+  processing_time_ms?: number;
+  processed_image_url?: string;
+  visualization_url?: string;
+  message: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface HealthResponse {

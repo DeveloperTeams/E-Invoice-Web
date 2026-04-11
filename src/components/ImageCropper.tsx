@@ -16,17 +16,15 @@ export default function ImageCropper({ image, onCropComplete, onSkipCrop, onCanc
   const [imageUrl, setImageUrl] = useState<string>('');
   const [originalFile, setOriginalFile] = useState<File | null>(null);
   const [corners, setCorners] = useState<Point[]>([
-    { x: 0, y: 0 },
-    { x: 100, y: 0 },
-    { x: 100, y: 100 },
-    { x: 0, y: 100 },
+    { x: 5, y: 5 },
+    { x: 95, y: 5 },
+    { x: 95, y: 95 },
+    { x: 5, y: 95 },
   ]);
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
   const [hasAdjusted, setHasAdjusted] = useState(false);
   const [imageNaturalSize, setImageNaturalSize] = useState({ width: 0, height: 0 });
-  const [imageDisplayRect, setImageDisplayRect] = useState<DOMRect | null>(null);
 
-  const containerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
 
   useEffect(() => {
@@ -44,10 +42,6 @@ export default function ImageCropper({ image, onCropComplete, onSkipCrop, onCanc
   const handleImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     const img = e.currentTarget;
     setImageNaturalSize({ width: img.naturalWidth, height: img.naturalHeight });
-
-    requestAnimationFrame(() => {
-      setImageDisplayRect(img.getBoundingClientRect());
-    });
   }, []);
 
   const handleMouseDown = (index: number) => (e: React.MouseEvent) => {
@@ -67,8 +61,9 @@ export default function ImageCropper({ image, onCropComplete, onSkipCrop, onCanc
   });
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (draggingIndex === null || !containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
+    const imageElement = imageRef.current;
+    if (draggingIndex === null || !imageElement) return;
+    const rect = imageElement.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
 
@@ -77,12 +72,14 @@ export default function ImageCropper({ image, onCropComplete, onSkipCrop, onCanc
       next[draggingIndex] = clampCorner(x, y);
       return next;
     });
+    setHasAdjusted(true);
   }, [draggingIndex]);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (draggingIndex === null || !containerRef.current) return;
+    const imageElement = imageRef.current;
+    if (draggingIndex === null || !imageElement) return;
     const touch = e.touches[0];
-    const rect = containerRef.current.getBoundingClientRect();
+    const rect = imageElement.getBoundingClientRect();
     const x = ((touch.clientX - rect.left) / rect.width) * 100;
     const y = ((touch.clientY - rect.top) / rect.height) * 100;
 
@@ -91,33 +88,15 @@ export default function ImageCropper({ image, onCropComplete, onSkipCrop, onCanc
       next[draggingIndex] = clampCorner(x, y);
       return next;
     });
+    setHasAdjusted(true);
   }, [draggingIndex]);
 
   const handleMouseUp = useCallback(() => setDraggingIndex(null), []);
 
   const percentToImagePixels = useCallback((pct: Point): Point => {
     const { width: natW, height: natH } = imageNaturalSize;
-
-    if (!imageDisplayRect || !containerRef.current || natW === 0) {
-      return { x: (pct.x / 100) * natW, y: (pct.y / 100) * natH };
-    }
-
-    const wrapperRect = containerRef.current.getBoundingClientRect();
-    const scale = Math.min(
-      imageDisplayRect.width / natW,
-      imageDisplayRect.height / natH,
-    );
-    const offsetX = (imageDisplayRect.left - wrapperRect.left) / scale;
-    const offsetY = (imageDisplayRect.top - wrapperRect.top) / scale;
-
-    const wrapperX = (pct.x / 100) * wrapperRect.width;
-    const wrapperY = (pct.y / 100) * wrapperRect.height;
-
-    return {
-      x: (wrapperX / scale) - offsetX,
-      y: (wrapperY / scale) - offsetY,
-    };
-  }, [imageDisplayRect, imageNaturalSize]);
+    return { x: (pct.x / 100) * natW, y: (pct.y / 100) * natH };
+  }, [imageNaturalSize]);
 
   const getCroppedImage = useCallback(async (): Promise<File | null> => {
     const img = imageRef.current;
@@ -182,7 +161,7 @@ export default function ImageCropper({ image, onCropComplete, onSkipCrop, onCanc
           <p>Drag the handles to select the area, or skip cropping to use the full image</p>
         </div>
 
-        <div className="cropper-image-wrapper" ref={containerRef}>
+        <div className="cropper-image-wrapper">
           <img
             ref={imageRef}
             src={imageUrl}
@@ -191,41 +170,39 @@ export default function ImageCropper({ image, onCropComplete, onSkipCrop, onCanc
             onLoad={handleImageLoad}
           />
 
-          {hasAdjusted && (
-            <div className="crop-overlay">
+          <div className="crop-overlay">
+            <div
+              className="crop-region"
+              style={{
+                left: `${corners[0].x}%`,
+                top: `${corners[0].y}%`,
+                width: `${corners[1].x - corners[0].x}%`,
+                height: `${corners[2].y - corners[0].y}%`,
+              }}
+            />
+
+            {corners.map((corner, index) => (
               <div
-                className="crop-region"
+                key={index}
+                className={`crop-handle ${draggingIndex === index ? 'dragging' : ''}`}
                 style={{
-                  left: `${corners[0].x}%`,
-                  top: `${corners[0].y}%`,
-                  width: `${corners[1].x - corners[0].x}%`,
-                  height: `${corners[2].y - corners[0].y}%`,
+                  left: `${corner.x}%`,
+                  top: `${corner.y}%`,
                 }}
-              />
+                onMouseDown={handleMouseDown(index)}
+                onTouchStart={handleTouchStart(index)}
+              >
+                <div className="crop-handle-inner" />
+              </div>
+            ))}
 
-              {corners.map((corner, index) => (
-                <div
-                  key={index}
-                  className={`crop-handle ${draggingIndex === index ? 'dragging' : ''}`}
-                  style={{
-                    left: `${corner.x}%`,
-                    top: `${corner.y}%`,
-                  }}
-                  onMouseDown={handleMouseDown(index)}
-                  onTouchStart={handleTouchStart(index)}
-                >
-                  <div className="crop-handle-inner" />
-                </div>
-              ))}
-
-              <svg className="crop-lines" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
-                <line x1={`${corners[0].x}%`} y1={`${corners[0].y}%`} x2={`${corners[1].x}%`} y2={`${corners[1].y}%`} stroke="#6366F1" strokeWidth="2" strokeDasharray="5,5" />
-                <line x1={`${corners[1].x}%`} y1={`${corners[1].y}%`} x2={`${corners[2].x}%`} y2={`${corners[2].y}%`} stroke="#6366F1" strokeWidth="2" strokeDasharray="5,5" />
-                <line x1={`${corners[2].x}%`} y1={`${corners[2].y}%`} x2={`${corners[3].x}%`} y2={`${corners[3].y}%`} stroke="#6366F1" strokeWidth="2" strokeDasharray="5,5" />
-                <line x1={`${corners[3].x}%`} y1={`${corners[3].y}%`} x2={`${corners[0].x}%`} y2={`${corners[0].y}%`} stroke="#6366F1" strokeWidth="2" strokeDasharray="5,5" />
-              </svg>
-            </div>
-          )}
+            <svg className="crop-lines" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
+              <line x1={`${corners[0].x}%`} y1={`${corners[0].y}%`} x2={`${corners[1].x}%`} y2={`${corners[1].y}%`} stroke="#6366F1" strokeWidth="2" strokeDasharray="5,5" />
+              <line x1={`${corners[1].x}%`} y1={`${corners[1].y}%`} x2={`${corners[2].x}%`} y2={`${corners[2].y}%`} stroke="#6366F1" strokeWidth="2" strokeDasharray="5,5" />
+              <line x1={`${corners[2].x}%`} y1={`${corners[2].y}%`} x2={`${corners[3].x}%`} y2={`${corners[3].y}%`} stroke="#6366F1" strokeWidth="2" strokeDasharray="5,5" />
+              <line x1={`${corners[3].x}%`} y1={`${corners[3].y}%`} x2={`${corners[0].x}%`} y2={`${corners[0].y}%`} stroke="#6366F1" strokeWidth="2" strokeDasharray="5,5" />
+            </svg>
+          </div>
         </div>
 
         <div className="cropper-actions">
