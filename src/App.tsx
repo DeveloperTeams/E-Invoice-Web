@@ -34,9 +34,10 @@ const EMPTY_INVOICE_DATA: InvoiceData = {
   items: [],
   payment: {
     subtotal: 0,
-    tax: 0,
+    tax: null,
     total: 0,
-    method: '',
+    discount_usd: null,
+    method: null,
   },
   dynamic_fields: {},
   raw_text: '',

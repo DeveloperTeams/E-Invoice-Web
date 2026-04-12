@@ -7,9 +7,22 @@ export interface LineItem {
 
 export interface PaymentInfo {
   subtotal: number;
-  tax: number;
+  tax: number | null;
   total: number;
-  method: string;
+  discount_usd: number | null;
+  method: string | null;
+}
+
+export interface LLMEnhancement {
+  enabled: boolean;
+  applied: boolean;
+  error: string | null;
+  model: string;
+  validation_passed: boolean;
+  debug_summary?: {
+    fields_changed: number;
+    changes?: Record<string, unknown>;
+  };
 }
 
 export interface InvoiceData {
@@ -21,8 +34,14 @@ export interface InvoiceData {
   invoice_time: string;
   items: LineItem[];
   payment: PaymentInfo;
+  cashier_name?: string | null;
+  exchange_rate?: string | null;
+  total_khr?: number | null;
+  discount_usd?: number | null;
+  payment_method?: string | null;
   dynamic_fields: Record<string, any>;
   raw_text: string;
+  llm_enhancement?: LLMEnhancement | null;
 }
 
 export interface BoundingBox {

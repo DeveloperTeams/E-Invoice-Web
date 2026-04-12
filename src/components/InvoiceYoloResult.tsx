@@ -7,11 +7,17 @@ interface InvoiceYoloResultProps {
 }
 
 export default function InvoiceYoloResult({ invoiceData, processingInfo, onReset }: InvoiceYoloResultProps) {
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number | null) => {
+    if (amount === null || amount === undefined) return 'N/A';
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
     }).format(amount);
+  };
+
+  const formatKHR = (amount: number | null) => {
+    if (amount === null || amount === undefined) return 'N/A';
+    return new Intl.NumberFormat('en-KH').format(amount) + ' KHR';
   };
 
   const formatDate = (date: string) => {
@@ -21,6 +27,13 @@ export default function InvoiceYoloResult({ invoiceData, processingInfo, onReset
       month: 'long',
       day: 'numeric',
     });
+  };
+
+  const formatDynamicFieldValue = (value: any): string => {
+    if (value === null || value === undefined) return 'N/A';
+    if (Array.isArray(value)) return value.join(', ');
+    if (typeof value === 'object') return JSON.stringify(value, null, 2);
+    return String(value);
   };
 
   return (
@@ -102,6 +115,12 @@ export default function InvoiceYoloResult({ invoiceData, processingInfo, onReset
               <span className="info-label">Phone</span>
               <span className="info-value">{invoiceData.merchant_phone || 'N/A'}</span>
             </div>
+            {invoiceData.cashier_name && (
+              <div className="info-row">
+                <span className="info-label">Cashier</span>
+                <span className="info-value cashier-badge">{invoiceData.cashier_name}</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -174,24 +193,96 @@ export default function InvoiceYoloResult({ invoiceData, processingInfo, onReset
               <span className="info-label">Subtotal</span>
               <span className="info-value">{formatCurrency(invoiceData.payment?.subtotal || 0)}</span>
             </div>
-            <div className="info-row">
-              <span className="info-label">Tax</span>
-              <span className="info-value">{formatCurrency(invoiceData.payment?.tax || 0)}</span>
-            </div>
+            {(invoiceData.payment?.tax !== null && invoiceData.payment?.tax !== undefined) && (
+              <div className="info-row">
+                <span className="info-label">Tax</span>
+                <span className="info-value">{formatCurrency(invoiceData.payment?.tax)}</span>
+              </div>
+            )}
+            {(invoiceData.discount_usd !== null && invoiceData.discount_usd !== undefined && invoiceData.discount_usd > 0) && (
+              <div className="info-row discount-row">
+                <span className="info-label">Discount</span>
+                <span className="info-value discount-value">-{formatCurrency(invoiceData.discount_usd)}</span>
+              </div>
+            )}
+            {(invoiceData.payment?.discount_usd !== null && invoiceData.payment?.discount_usd !== undefined && invoiceData.payment.discount_usd > 0) && (
+              <div className="info-row discount-row">
+                <span className="info-label">Discount (Payment)</span>
+                <span className="info-value discount-value">-{formatCurrency(invoiceData.payment.discount_usd)}</span>
+              </div>
+            )}
             <div className="info-row total-row">
-              <span className="info-label">Total</span>
+              <span className="info-label">Total (USD)</span>
               <span className="info-value total-amount">{formatCurrency(invoiceData.payment?.total || 0)}</span>
             </div>
-            {invoiceData.payment?.method && (
+            {invoiceData.total_khr && (
+              <div className="info-row">
+                <span className="info-label">Total (KHR)</span>
+                <span className="info-value khr-amount">{formatKHR(invoiceData.total_khr)}</span>
+              </div>
+            )}
+            {invoiceData.exchange_rate && (
+              <div className="info-row">
+                <span className="info-label">Exchange Rate</span>
+                <span className="info-value">
+                  <span className="exchange-rate-badge">{invoiceData.exchange_rate}</span>
+                </span>
+              </div>
+            )}
+            {(invoiceData.payment_method || invoiceData.payment?.method) && (
               <div className="info-row">
                 <span className="info-label">Payment Method</span>
                 <span className="info-value">
-                  <span className="payment-badge">{invoiceData.payment.method}</span>
+                  <span className="payment-badge">{invoiceData.payment_method || invoiceData.payment?.method}</span>
                 </span>
               </div>
             )}
           </div>
         </div>
+
+        {/* LLM Enhancement Info */}
+        {invoiceData.llm_enhancement && invoiceData.llm_enhancement.enabled && (
+          <div className="result-card">
+            <div className="card-header">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="#8B5CF6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <h3>AI Enhancement</h3>
+            </div>
+            <div className="card-content">
+              <div className="info-row">
+                <span className="info-label">Status</span>
+                <span className="info-value">
+                  <span className={`llm-badge ${invoiceData.llm_enhancement.applied ? 'applied' : 'not-applied'}`}>
+                    {invoiceData.llm_enhancement.applied ? 'Applied' : 'Not Applied'}
+                  </span>
+                </span>
+              </div>
+              <div className="info-row">
+                <span className="info-label">Model</span>
+                <span className="info-value">
+                  <span className="model-badge">{invoiceData.llm_enhancement.model}</span>
+                </span>
+              </div>
+              <div className="info-row">
+                <span className="info-label">Validation</span>
+                <span className="info-value">
+                  <span className={`validation-badge ${invoiceData.llm_enhancement.validation_passed ? 'passed' : 'failed'}`}>
+                    {invoiceData.llm_enhancement.validation_passed ? '✓ Passed' : '✗ Failed'}
+                  </span>
+                </span>
+              </div>
+              {invoiceData.llm_enhancement.debug_summary && invoiceData.llm_enhancement.debug_summary.fields_changed !== undefined && (
+                <div className="info-row">
+                  <span className="info-label">Fields Enhanced</span>
+                  <span className="info-value">
+                    <span className="fields-count">{invoiceData.llm_enhancement.debug_summary.fields_changed}</span>
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Processing Info */}
         <div className="result-card">
@@ -224,6 +315,30 @@ export default function InvoiceYoloResult({ invoiceData, processingInfo, onReset
           </div>
         </div>
       </div>
+
+      {/* Dynamic Fields (Collapsible) */}
+      {invoiceData.dynamic_fields && Object.keys(invoiceData.dynamic_fields).length > 0 && (
+        <details className="result-card full-width dynamic-fields-card">
+          <summary className="card-header clickable">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" stroke="#6366F1" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+              <h3>Dynamic Fields ({Object.keys(invoiceData.dynamic_fields).length})</h3>
+            </div>
+          </summary>
+          <div className="card-content">
+            <div className="dynamic-fields-grid">
+              {Object.entries(invoiceData.dynamic_fields).map(([key, value]) => (
+                <div className="dynamic-field-item" key={key}>
+                  <span className="dynamic-field-label">{key}</span>
+                  <span className="dynamic-field-value">{formatDynamicFieldValue(value)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </details>
+      )}
 
       {/* Raw Text (Collapsible) */}
       {invoiceData.raw_text && (

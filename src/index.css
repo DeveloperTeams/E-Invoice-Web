@@ -1267,6 +1267,146 @@ body {
   font-weight: 700;
 }
 
+/* Cashier Badge */
+.cashier-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-sm);
+  background: #dbeafe;
+  color: #1e40af;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+/* Exchange Rate Badge */
+.exchange-rate-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-sm);
+  background: #d1fae5;
+  color: #065f46;
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: 'Courier New', monospace;
+}
+
+/* KHR Amount */
+.khr-amount {
+  font-size: 1.125rem;
+  color: #059669;
+  font-weight: 700;
+}
+
+/* Discount Row */
+.discount-row {
+  background: #fef2f2;
+  padding: 0.75rem;
+  border-radius: var(--radius-md);
+  border: none;
+}
+
+.discount-value {
+  color: #dc2626;
+}
+
+/* LLM Enhancement Badges */
+.llm-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.llm-badge.applied {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.llm-badge.not-applied {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.model-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-sm);
+  background: #e0e7ff;
+  color: #3730a3;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: 'Courier New', monospace;
+}
+
+.validation-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.validation-badge.passed {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.validation-badge.failed {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.fields-count {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  background: #f3e8ff;
+  color: #6b21a8;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+/* Dynamic Fields */
+.dynamic-fields-card {
+  margin-top: 0.5rem;
+}
+
+.dynamic-fields-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.dynamic-field-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: var(--color-bg-alt);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+
+.dynamic-field-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.dynamic-field-value {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text);
+  word-break: break-word;
+  font-family: 'Courier New', monospace;
+  background: #fff;
+  padding: 0.5rem;
+  border-radius: var(--radius-sm);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .result-header {
@@ -1283,6 +1423,10 @@ body {
     grid-template-columns: 1.5fr 0.5fr 1fr 1fr;
     gap: 0.5rem;
     font-size: 0.75rem;
+  }
+
+  .dynamic-fields-grid {
+    grid-template-columns: 1fr;
   }
 
   .hero-title {
