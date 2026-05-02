@@ -349,7 +349,7 @@ function AboutView() {
             <h4 className="mb-4 text-xl font-bold text-primary-500">Frontend</h4>
             <ul className="space-y-3">
               {['React 19 + TypeScript', 'Vite (Build Tool)', 'TailwindCSS 4', 'Bun (Package Manager)'].map((tech) => (
-                <li key={tech} className="relative pl-6 text-sm text-text-muted before:absolute before:left-0 before:font-bold before:text-emerald-500 before:content-['\2713']">
+                <li key={tech} className="relative pl-6 text-sm text-text-muted before:absolute before:left-0 before:font-bold before:text-emerald-500 before:content-['\u2713']">
                   {tech}
                 </li>
               ))}
@@ -360,7 +360,7 @@ function AboutView() {
             <h4 className="mb-4 text-xl font-bold text-primary-500">Backend</h4>
             <ul className="space-y-3">
               {['FastAPI (Python)', 'OpenCV', 'YOLOv10', 'NextOCR Engine'].map((tech) => (
-                <li key={tech} className="relative pl-6 text-sm text-text-muted before:absolute before:left-0 before:font-bold before:text-emerald-500 before:content-['\2713']">
+                <li key={tech} className="relative pl-6 text-sm text-text-muted before:absolute before:left-0 before:font-bold before:text-emerald-500 before:content-['\u2713']">
                   {tech}
                 </li>
               ))}
